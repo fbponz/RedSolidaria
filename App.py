@@ -5,11 +5,14 @@ import folium
 from fpdf import FPDF
 import tkinter as tk
 from tkinter import messagebox, filedialog
+import tkinter.ttk as ttk
 import webbrowser
 from DataGestor import DataGestor
 
 data_path = 'data/data.csv'
 data_gestor = DataGestor(data_path)
+
+internet_connection = False
 
 def convertir_direccion_en_coordenadas(direccion):
     nominatim = Nominatim()
@@ -27,11 +30,16 @@ def guardar_datos():
     home_status_val = home_status_var.get()
     comentarios_val = comentarios_text.get("1.0", tk.END).strip()
 
-    try:
-        lat, lon = convertir_direccion_en_coordenadas(direccion_val)
-    except Exception as e:
-        messagebox.showerror("Error", f"Dirección Invalida: {e}")
-        return
+    if internet_connection:
+        try:
+            lat, lon = convertir_direccion_en_coordenadas(direccion_val)
+        except Exception as e:
+            messagebox.showerror("Error", f"Dirección Invalida: {e}")
+            return
+    else:
+        lat = 0
+        lon = 0
+    
     data_gestor.set_values(
         id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
     )
@@ -158,6 +166,33 @@ def crear_nueva_incidencia():
     comentarios_text.delete("1.0", tk.END)
     messagebox.showinfo("Éxito", "Nuevo usuario creado con ID: {}".format(new_id))
 
+def actualizar_coordenadas():
+    try:
+        df = pd.read_csv(data_path, sep=';')
+        for index, row in df.iterrows():
+            if row['Latitud'] == 0.0 and row['Longitud'] == 0.0:
+                try:
+                    lat, lon = convertir_direccion_en_coordenadas(row['Dirección'])
+                    df.at[index, 'Latitud'] = lat
+                    df.at[index, 'Longitud'] = lon
+                except Exception as e:
+                    messagebox.showwarning("Advertencia", f"No se pudo actualizar la dirección: {row['Dirección']}")
+        df.to_csv(data_path, sep=';', index=False)
+        messagebox.showinfo("Éxito", "Coordenadas actualizadas correctamente")
+    except Exception as e:
+        messagebox.showerror("Error", f"No se pudo actualizar el archivo: {e}")
+
+def guardar_estado_internet():
+    with open("internet_status.txt", "w") as f:
+        f.write("1" if internet_connection else "0")
+
+def toggle_internet_connection():
+    global internet_connection
+    internet_connection = not internet_connection
+    internet_status_label.config(text="Conectado" if internet_connection else "Desconectado")
+    guardar_estado_internet()
+    if internet_connection:
+        actualizar_coordenadas()
 
 root = tk.Tk()
 root.title("Formulario de Necesidades")
@@ -203,5 +238,12 @@ tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=5, column=2)
 
 
 tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=5, column=3)
+
+internet_var = tk.BooleanVar(value=internet_connection)
+toggle_button = ttk.Checkbutton(root, text="Conexión a Internet", variable=internet_var, style="Switch.TCheckbutton", command=toggle_internet_connection)
+toggle_button.grid(row=6, column=0, columnspan=2)
+
+internet_status_label = tk.Label(root, text="Desconectado", font=("Arial", 10))
+internet_status_label.grid(row=6, column=2)
 
 root.mainloop()
