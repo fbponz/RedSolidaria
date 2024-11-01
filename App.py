@@ -8,6 +8,7 @@ from tkinter import messagebox, filedialog
 import tkinter.ttk as ttk
 import webbrowser
 from DataGestor import DataGestor
+from PDFCreator import PDFCreator
 
 data_path = 'data/data.csv'
 data_gestor = DataGestor(data_path)
@@ -45,64 +46,14 @@ def guardar_datos():
     )
     messagebox.showinfo("Éxito", "Datos guardados correctamente")
 
-
 def generar_pdf():
-    try:
-        df = data_gestor.read_data()
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo leer los datos: {e}")
-        return
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    # Información global de necesidad
-    pdf.cell(200, 10, txt="Información Global de Necesidad", ln=True, align='C')
-    pdf.ln(10)
-
-    necesidades_globales = {
-        "Agua": df["Agua"].sum(),
-        "Comida": df["Comida"].sum(),
-        "Ropa": df["Ropa"].sum(),
-        "Medicamentos": df["Medicamentos"].sum(),
-        "Actividad": df["Actividad"].sum()
-    }
-
-    for key, value in necesidades_globales.items():
-        pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
-
-    pdf.ln(10)
-
-    # Información por cada ID
-    pdf.cell(200, 10, txt="Información por ID", ln=True, align='C')
-    pdf.ln(10)
-
-    for index, row in df.iterrows():
-        pdf.cell(200, 10, txt=f"ID: {row['ID']}", ln=True)
-        pdf.cell(200, 10, txt=f"Dirección: {row['Dirección']}", ln=True)
-        pdf.cell(200, 10, txt=f"Latitud: {row['Latitud']}", ln=True)
-        pdf.cell(200, 10, txt=f"Longitud: {row['Longitud']}", ln=True)
-        pdf.cell(200, 10, txt=f"Agua: {'Sí' if row['Agua'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Comida: {'Sí' if row['Comida'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Ropa: {'Sí' if row['Ropa'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Medicamentos: {'Sí' if row['Medicamentos'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Estado de la vivienda: {row['Estado de la vivienda']}", ln=True)
-        pdf.cell(200, 10, txt=f"Comentarios: {row['Comentarios']}", ln=True)
-        pdf.ln(10)
-
-    try:
-        pdf_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")])
-        if pdf_path:
-            pdf.output(pdf_path)
-            messagebox.showinfo("Éxito", "PDF generado correctamente")
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo generar el PDF: {e}")
+    pdf_creator = PDFCreator(data_gestor)
+    pdf_creator.generar_pdf()
 
 def cargar_datos():
     id_val = id_entry.get()
     try:
-        user_data = data_gestor.get_data_by_identifier(int(id_val))
+        user_data = data_gestor.get_data_by_id(int(id_val))
         if user_data.empty:
             messagebox.showerror("Error", "ID no encontrado")
             return
@@ -139,10 +90,6 @@ def mostrar_mapa():
 
     mapa_path = 'mapa.html'
     mapa.save(mapa_path)
-
-    # Mostrar el mapa en una nueva ventana del navegador
-    webbrowser.open(mapa_path)
-    messagebox.showinfo("Éxito", "Mapa generado y mostrado correctamente")
 
 def crear_nueva_incidencia():
     try:
@@ -207,7 +154,6 @@ tk.Label(root, text="Dirección").grid(row=1, column=0)
 direccion_entry = tk.Entry(root)
 direccion_entry.grid(row=1, column=1)
 
-
 agua_var = tk.BooleanVar()
 tk.Checkbutton(root, text="Agua", variable=agua_var).grid(row=2, column=0)
 
@@ -235,8 +181,6 @@ comentarios_text.grid(row=4, column=1, columnspan=3)
 
 tk.Button(root, text="Guardar Datos", command=guardar_datos).grid(row=5, column=1)
 tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=5, column=2)
-
-
 tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=5, column=3)
 
 internet_var = tk.BooleanVar(value=internet_connection)
