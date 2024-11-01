@@ -26,7 +26,7 @@ class DataGestor:
             if int(id_val) in df['ID'].values:
                 df.update(pd.DataFrame([new_data]).set_index('ID'))
             else:
-                df = df.append(new_data, ignore_index=True)
+                df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
             df.to_csv(self.file_path, sep=';', index=False)
             return "Success", "Datos guardados correctamente"
         except Exception as e:
