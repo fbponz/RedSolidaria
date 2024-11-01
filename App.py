@@ -22,6 +22,7 @@ def convertir_direccion_en_coordenadas(direccion):
 
 def guardar_datos():
     id_val = id_entry.get()
+    nombre_val = name_entry.get()
     direccion_val = direccion_entry.get()
     agua_val = agua_var.get()
     comida_val = comida_var.get()
@@ -40,9 +41,9 @@ def guardar_datos():
     else:
         lat = 0
         lon = 0
-    
+
     data_gestor.set_values(
-        id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
+        nombre_val, id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
     )
     messagebox.showinfo("Éxito", "Datos guardados correctamente")
 
@@ -91,28 +92,6 @@ def mostrar_mapa():
     mapa_path = 'mapa.html'
     mapa.save(mapa_path)
 
-def crear_nueva_incidencia():
-    try:
-        df = pd.read_csv(data_path, sep=';')
-        if df['ID'].empty:
-            new_id = 1
-        else:
-            new_id = df['ID'].max() + 1
-    except Exception as e:
-        new_id = 1  # Si no se puede leer el archivo, empezamos con ID 1
-
-    id_entry.delete(0, tk.END)
-    id_entry.insert(0, new_id)
-    direccion_entry.delete(0, tk.END)
-    agua_var.set(False)
-    comida_var.set(False)
-    ropa_var.set(False)
-    medicamentos_var.set(False)
-    actividad_var.set(False)
-    home_status_var.set("Sin desperfectos")
-    comentarios_text.delete("1.0", tk.END)
-    messagebox.showinfo("Éxito", "Nuevo usuario creado con ID: {}".format(new_id))
-
 def actualizar_coordenadas():
     try:
         df = pd.read_csv(data_path, sep=';')
@@ -145,49 +124,53 @@ root = tk.Tk()
 root.title("Formulario de Necesidades")
 
 tk.Label(root, text="ID").grid(row=0, column=0)
+tk.Button(root, text="Cargar Incidencia", command=cargar_datos).grid(row=0, column=2)
 id_entry = tk.Entry(root)
 id_entry.grid(row=0, column=1)
-tk.Button(root, text="Nueva Incidencia", command=crear_nueva_incidencia).grid(row=0, column=2)
-tk.Button(root, text="Cargar Incidencia", command=cargar_datos).grid(row=0, column=3)
+tk.Label(root, text="Nombre").grid(row=1, column=0)
+name_entry = tk.Entry(root)
+name_entry.grid(row=1, column=1)
 
-tk.Label(root, text="Dirección").grid(row=1, column=0)
+
+
+tk.Label(root, text="Dirección").grid(row=2, column=0)
 direccion_entry = tk.Entry(root)
-direccion_entry.grid(row=1, column=1)
+direccion_entry.grid(row=2, column=1)
 
 agua_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Agua", variable=agua_var).grid(row=2, column=0)
+tk.Checkbutton(root, text="Agua", variable=agua_var).grid(row=3, column=0)
 
 comida_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Comida", variable=comida_var).grid(row=2, column=1)
+tk.Checkbutton(root, text="Comida", variable=comida_var).grid(row=3, column=1)
 
 ropa_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Ropa", variable=ropa_var).grid(row=2, column=2)
+tk.Checkbutton(root, text="Ropa", variable=ropa_var).grid(row=3, column=2)
 
 medicamentos_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Medicamentos", variable=medicamentos_var).grid(row=2, column=3)
+tk.Checkbutton(root, text="Medicamentos", variable=medicamentos_var).grid(row=3, column=3)
 
 actividad_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Actividad", variable=actividad_var).grid(row=2, column=4)
+tk.Checkbutton(root, text="Actividad", variable=actividad_var).grid(row=3, column=4)
 
 
-tk.Label(root, text="Estado de la vivienda").grid(row=3, column=0)
+tk.Label(root, text="Estado de la vivienda").grid(row=4, column=0)
 home_status_var = tk.StringVar()
 home_status_var.set("Sin desperfectos")
-tk.OptionMenu(root, home_status_var, "Sin desperfectos", "Con algunos desperfectos", "No habitable").grid(row=3, column=1)
+tk.OptionMenu(root, home_status_var, "Sin desperfectos", "Con algunos desperfectos", "No habitable").grid(row=4, column=1)
 
-tk.Label(root, text="Comentarios").grid(row=4, column=0)
-comentarios_text = tk.Text(root, height=4, width=40)
-comentarios_text.grid(row=4, column=1, columnspan=3)
+tk.Label(root, text="Comentarios").grid(row=5, column=0)
+comentarios_text = tk.Text(root, height=5, width=40)
+comentarios_text.grid(row=5, column=1, columnspan=3)
 
-tk.Button(root, text="Guardar Datos", command=guardar_datos).grid(row=5, column=1)
-tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=5, column=2)
-tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=5, column=3)
+tk.Button(root, text="Guardar Datos", command=guardar_datos).grid(row=6, column=1)
+tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=6, column=2)
+tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=6, column=3)
 
 internet_var = tk.BooleanVar(value=internet_connection)
 toggle_button = ttk.Checkbutton(root, text="Conexión a Internet", variable=internet_var, style="Switch.TCheckbutton", command=toggle_internet_connection)
-toggle_button.grid(row=6, column=0, columnspan=2)
+toggle_button.grid(row=7, column=0, columnspan=2)
 
 internet_status_label = tk.Label(root, text="Desconectado", font=("Arial", 10))
-internet_status_label.grid(row=6, column=2)
+internet_status_label.grid(row=7, column=2)
 
 root.mainloop()

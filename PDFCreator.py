@@ -18,8 +18,6 @@ class PDFCreator:
 
         # Información global de necesidad
         pdf.cell(200, 10, txt="Información Global de Necesidad", ln=True, align='C')
-        pdf.ln(10)
-
 
         if 'Agua' in df.columns:
             df['AGUA_NUM'] = df['Agua'].apply(lambda x: 1 if x else 0)
@@ -44,23 +42,15 @@ class PDFCreator:
         for key, value in necesidades_globales.items():
             pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
 
-        pdf.ln(10)
-
         # Información por cada ID
         pdf.cell(200, 10, txt="Información por ID", ln=True, align='C')
-        pdf.ln(10)
 
         for index, row in df.iterrows():
-            pdf.cell(200, 10, txt=f"ID: {row['ID']}", ln=True)
+            pdf.cell(200, 10, txt=f"ID: {row['ID']} - Nombre: {row['Nombre']}", ln=True)
             pdf.cell(200, 10, txt=f"Dirección: {row['Dirección']}", ln=True)
-            pdf.cell(200, 10, txt=f"Latitud: {row['Latitud']}", ln=True)
-            pdf.cell(200, 10, txt=f"Longitud: {row['Longitud']}", ln=True)
-            pdf.cell(200, 10, txt=f"Agua: {'Sí' if row['Agua'] else 'No'}", ln=True)
-            pdf.cell(200, 10, txt=f"Comida: {'Sí' if row['Comida'] else 'No'}", ln=True)
-            pdf.cell(200, 10, txt=f"Ropa: {'Sí' if row['Ropa'] else 'No'}", ln=True)
-            pdf.cell(200, 10, txt=f"Medicamentos: {'Sí' if row['Medicamentos'] else 'No'}", ln=True)
+            pdf.cell(200, 10, txt=f"Agua: {'Sí' if row['Agua'] else 'No'} | Comida: {'Sí' if row['Comida'] else 'No'} | Ropa: {'Sí' if row['Ropa'] else 'No'} | Medicamentos: {'Sí' if row['Medicamentos'] else 'No'}", ln=True)
             pdf.cell(200, 10, txt=f"Estado de la vivienda: {row['Estado de la vivienda']}", ln=True)
-            pdf.cell(200, 10, txt=f"Comentarios: {row['Comentarios']}", ln=True)
+            pdf.cell(200, 10, txt=f"Comentarios: \n {row['Comentarios']}", ln=True)
             pdf.ln(10)
 
         try:

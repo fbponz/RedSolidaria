@@ -6,9 +6,10 @@ class DataGestor:
         self.file_path = file_path
         self.data = pd.read_csv(self.file_path, sep=';')
 
-    def set_values(self, id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val):
+    def set_values(self, nombre_val, id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val):
         new_data = {
             "ID": id_val,
+            "Nombre": nombre_val,
             "Dirección": direccion_val,
             "Latitud": lat,
             "Longitud": lon,
