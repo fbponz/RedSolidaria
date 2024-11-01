@@ -5,11 +5,15 @@ import folium
 from fpdf import FPDF
 import tkinter as tk
 from tkinter import messagebox, filedialog
+import tkinter.ttk as ttk
 import webbrowser
 from DataGestor import DataGestor
+from PDFCreator import PDFCreator
 
 data_path = 'data/data.csv'
 data_gestor = DataGestor(data_path)
+
+internet_connection = False
 
 def convertir_direccion_en_coordenadas(direccion):
     nominatim = Nominatim()
@@ -18,6 +22,7 @@ def convertir_direccion_en_coordenadas(direccion):
 
 def guardar_datos():
     id_val = id_entry.get()
+    nombre_val = name_entry.get()
     direccion_val = direccion_entry.get()
     agua_val = agua_var.get()
     comida_val = comida_var.get()
@@ -27,74 +32,29 @@ def guardar_datos():
     home_status_val = home_status_var.get()
     comentarios_val = comentarios_text.get("1.0", tk.END).strip()
 
-    try:
-        lat, lon = convertir_direccion_en_coordenadas(direccion_val)
-    except Exception as e:
-        messagebox.showerror("Error", f"Dirección Invalida: {e}")
-        return
+    if internet_connection:
+        try:
+            lat, lon = convertir_direccion_en_coordenadas(direccion_val)
+        except Exception as e:
+            messagebox.showerror("Error", f"Dirección Invalida: {e}")
+            return
+    else:
+        lat = 0
+        lon = 0
+
     data_gestor.set_values(
-        id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
+        nombre_val, id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
     )
     messagebox.showinfo("Éxito", "Datos guardados correctamente")
 
-
 def generar_pdf():
-    try:
-        df = data_gestor.read_data()
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo leer los datos: {e}")
-        return
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    # Información global de necesidad
-    pdf.cell(200, 10, txt="Información Global de Necesidad", ln=True, align='C')
-    pdf.ln(10)
-
-    necesidades_globales = {
-        "Agua": df["Agua"].sum(),
-        "Comida": df["Comida"].sum(),
-        "Ropa": df["Ropa"].sum(),
-        "Medicamentos": df["Medicamentos"].sum(),
-        "Actividad": df["Actividad"].sum()
-    }
-
-    for key, value in necesidades_globales.items():
-        pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
-
-    pdf.ln(10)
-
-    # Información por cada ID
-    pdf.cell(200, 10, txt="Información por ID", ln=True, align='C')
-    pdf.ln(10)
-
-    for index, row in df.iterrows():
-        pdf.cell(200, 10, txt=f"ID: {row['ID']}", ln=True)
-        pdf.cell(200, 10, txt=f"Dirección: {row['Dirección']}", ln=True)
-        pdf.cell(200, 10, txt=f"Latitud: {row['Latitud']}", ln=True)
-        pdf.cell(200, 10, txt=f"Longitud: {row['Longitud']}", ln=True)
-        pdf.cell(200, 10, txt=f"Agua: {'Sí' if row['Agua'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Comida: {'Sí' if row['Comida'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Ropa: {'Sí' if row['Ropa'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Medicamentos: {'Sí' if row['Medicamentos'] else 'No'}", ln=True)
-        pdf.cell(200, 10, txt=f"Estado de la vivienda: {row['Estado de la vivienda']}", ln=True)
-        pdf.cell(200, 10, txt=f"Comentarios: {row['Comentarios']}", ln=True)
-        pdf.ln(10)
-
-    try:
-        pdf_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")])
-        if pdf_path:
-            pdf.output(pdf_path)
-            messagebox.showinfo("Éxito", "PDF generado correctamente")
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo generar el PDF: {e}")
+    pdf_creator = PDFCreator(data_gestor)
+    pdf_creator.generar_pdf()
 
 def cargar_datos():
     id_val = id_entry.get()
     try:
-        user_data = data_gestor.get_data_by_identifier(int(id_val))
+        user_data = data_gestor.get_data_by_id(int(id_val))
         if user_data.empty:
             messagebox.showerror("Error", "ID no encontrado")
             return
@@ -132,76 +92,85 @@ def mostrar_mapa():
     mapa_path = 'mapa.html'
     mapa.save(mapa_path)
 
-    # Mostrar el mapa en una nueva ventana del navegador
-    webbrowser.open(mapa_path)
-    messagebox.showinfo("Éxito", "Mapa generado y mostrado correctamente")
-
-def crear_nueva_incidencia():
+def actualizar_coordenadas():
     try:
         df = pd.read_csv(data_path, sep=';')
-        if df['ID'].empty:
-            new_id = 1
-        else:
-            new_id = df['ID'].max() + 1
+        for index, row in df.iterrows():
+            if row['Latitud'] == 0.0 and row['Longitud'] == 0.0:
+                try:
+                    lat, lon = convertir_direccion_en_coordenadas(row['Dirección'])
+                    df.at[index, 'Latitud'] = lat
+                    df.at[index, 'Longitud'] = lon
+                except Exception as e:
+                    messagebox.showwarning("Advertencia", f"No se pudo actualizar la dirección: {row['Dirección']}")
+        df.to_csv(data_path, sep=';', index=False)
+        messagebox.showinfo("Éxito", "Coordenadas actualizadas correctamente")
     except Exception as e:
-        new_id = 1  # Si no se puede leer el archivo, empezamos con ID 1
+        messagebox.showerror("Error", f"No se pudo actualizar el archivo: {e}")
 
-    id_entry.delete(0, tk.END)
-    id_entry.insert(0, new_id)
-    direccion_entry.delete(0, tk.END)
-    agua_var.set(False)
-    comida_var.set(False)
-    ropa_var.set(False)
-    medicamentos_var.set(False)
-    actividad_var.set(False)
-    home_status_var.set("Sin desperfectos")
-    comentarios_text.delete("1.0", tk.END)
-    messagebox.showinfo("Éxito", "Nuevo usuario creado con ID: {}".format(new_id))
+def guardar_estado_internet():
+    with open("internet_status.txt", "w") as f:
+        f.write("1" if internet_connection else "0")
 
+def toggle_internet_connection():
+    global internet_connection
+    internet_connection = not internet_connection
+    internet_status_label.config(text="Conectado" if internet_connection else "Desconectado")
+    guardar_estado_internet()
+    if internet_connection:
+        actualizar_coordenadas()
 
 root = tk.Tk()
 root.title("Formulario de Necesidades")
 
 tk.Label(root, text="ID").grid(row=0, column=0)
+tk.Button(root, text="Cargar Incidencia", command=cargar_datos).grid(row=0, column=2)
 id_entry = tk.Entry(root)
 id_entry.grid(row=0, column=1)
-tk.Button(root, text="Nueva Incidencia", command=crear_nueva_incidencia).grid(row=0, column=2)
-tk.Button(root, text="Cargar Incidencia", command=cargar_datos).grid(row=0, column=3)
+tk.Label(root, text="Nombre").grid(row=1, column=0)
+name_entry = tk.Entry(root)
+name_entry.grid(row=1, column=1)
 
-tk.Label(root, text="Dirección").grid(row=1, column=0)
+
+
+tk.Label(root, text="Dirección").grid(row=2, column=0)
 direccion_entry = tk.Entry(root)
-direccion_entry.grid(row=1, column=1)
-
+direccion_entry.grid(row=2, column=1)
 
 agua_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Agua", variable=agua_var).grid(row=2, column=0)
+tk.Checkbutton(root, text="Agua", variable=agua_var).grid(row=3, column=0)
 
 comida_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Comida", variable=comida_var).grid(row=2, column=1)
+tk.Checkbutton(root, text="Comida", variable=comida_var).grid(row=3, column=1)
 
 ropa_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Ropa", variable=ropa_var).grid(row=2, column=2)
+tk.Checkbutton(root, text="Ropa", variable=ropa_var).grid(row=3, column=2)
 
 medicamentos_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Medicamentos", variable=medicamentos_var).grid(row=2, column=3)
+tk.Checkbutton(root, text="Medicamentos", variable=medicamentos_var).grid(row=3, column=3)
 
 actividad_var = tk.BooleanVar()
-tk.Checkbutton(root, text="Actividad", variable=actividad_var).grid(row=2, column=4)
+tk.Checkbutton(root, text="Actividad", variable=actividad_var).grid(row=3, column=4)
 
 
-tk.Label(root, text="Estado de la vivienda").grid(row=3, column=0)
+tk.Label(root, text="Estado de la vivienda").grid(row=4, column=0)
 home_status_var = tk.StringVar()
 home_status_var.set("Sin desperfectos")
-tk.OptionMenu(root, home_status_var, "Sin desperfectos", "Con algunos desperfectos", "No habitable").grid(row=3, column=1)
+tk.OptionMenu(root, home_status_var, "Sin desperfectos", "Con algunos desperfectos", "No habitable").grid(row=4, column=1)
 
-tk.Label(root, text="Comentarios").grid(row=4, column=0)
-comentarios_text = tk.Text(root, height=4, width=40)
-comentarios_text.grid(row=4, column=1, columnspan=3)
+tk.Label(root, text="Comentarios").grid(row=5, column=0)
+comentarios_text = tk.Text(root, height=5, width=40)
+comentarios_text.grid(row=5, column=1, columnspan=3)
 
-tk.Button(root, text="Guardar Datos", command=guardar_datos).grid(row=5, column=1)
-tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=5, column=2)
+tk.Button(root, text="Guardar Datos", command=guardar_datos).grid(row=6, column=1)
+tk.Button(root, text="Generar PDF", command=generar_pdf).grid(row=6, column=2)
+tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=6, column=3)
 
+internet_var = tk.BooleanVar(value=internet_connection)
+toggle_button = ttk.Checkbutton(root, text="Conexión a Internet", variable=internet_var, style="Switch.TCheckbutton", command=toggle_internet_connection)
+toggle_button.grid(row=7, column=0, columnspan=2)
 
-tk.Button(root, text="Mostrar Mapa", command=mostrar_mapa).grid(row=5, column=3)
+internet_status_label = tk.Label(root, text="Desconectado", font=("Arial", 10))
+internet_status_label.grid(row=7, column=2)
 
 root.mainloop()
