@@ -2,3 +2,4 @@ OSMPythonTools==0.3.3
 pandas==2.1.1
 folium==0.14.0
 fpdf==1.7.2
+TkinterMapView==latest

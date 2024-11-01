@@ -4,7 +4,7 @@ class DataGestor:
 
     def __init__(self, file_path='data/data.csv'):
         self.file_path = file_path
-        self.data = pd.read_csv(self.file_path)
+        self.data = pd.read_csv(self.file_path, sep=';')
 
     def set_values(self, id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val):
         new_data = {
@@ -33,7 +33,8 @@ class DataGestor:
             return "Error", f"No se pudo guardar los datos: {e}"
 
     def read_data(self):
-        self.data = pd.read_csv(self.file_path)
+        self.data = pd.read_csv(self.file_path, sep=';')
+        return self.data
 
     def get_data_by_id(self, id_val):
         try:
