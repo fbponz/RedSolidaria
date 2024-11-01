@@ -6,9 +6,10 @@ from fpdf import FPDF
 import tkinter as tk
 from tkinter import messagebox, filedialog
 import webbrowser
+from DataGestor import DataGestor
 
 data_path = 'data/data.csv'
-data = pd.read_csv(data_path, sep=';')
+data_gestor = DataGestor(data_path)
 
 def convertir_direccion_en_coordenadas(direccion):
     nominatim = Nominatim()
@@ -22,6 +23,7 @@ def guardar_datos():
     comida_val = comida_var.get()
     ropa_val = ropa_var.get()
     medicamentos_val = medicamentos_var.get()
+    actividad_val = actividad_var.get()
     home_status_val = home_status_var.get()
     comentarios_val = comentarios_text.get("1.0", tk.END).strip()
 
@@ -30,34 +32,15 @@ def guardar_datos():
     except Exception as e:
         messagebox.showerror("Error", f"Dirección Invalida: {e}")
         return
+    data_gestor.set_values(
+        id_val, lat, lon, direccion_val, agua_val, comida_val, ropa_val, medicamentos_val, actividad_val, home_status_val, comentarios_val
+    )
+    messagebox.showinfo("Éxito", "Datos guardados correctamente")
 
-    new_data = {
-        "ID": id_val,
-        "Dirección": direccion_val,
-        "Latitud": lat,
-        "Longitud": lon,
-        "Agua": agua_val,
-        "Comida": comida_val,
-        "Ropa": ropa_val,
-        "Medicamentos": medicamentos_val,
-        "Estado de la vivienda": home_status_val,
-        "Comentarios": comentarios_val
-    }
-
-    try:
-        df = pd.read_csv(data_path, sep=';')
-        if int(id_val) in df['ID'].values:
-            df.update(pd.DataFrame([new_data]).set_index('ID'))
-        else:
-            df = df.append(new_data, ignore_index=True)
-        df.to_csv(data_path, sep=';', index=False)
-        messagebox.showinfo("Éxito", "Datos guardados correctamente")
-    except Exception as e:
-        messagebox.showerror("Error", f"No se pudo guardar los datos: {e}")
 
 def generar_pdf():
     try:
-        df = pd.read_csv(data_path, sep=';')
+        df = data_gestor.read_data()
     except Exception as e:
         messagebox.showerror("Error", f"No se pudo leer los datos: {e}")
         return
@@ -74,7 +57,8 @@ def generar_pdf():
         "Agua": df["Agua"].sum(),
         "Comida": df["Comida"].sum(),
         "Ropa": df["Ropa"].sum(),
-        "Medicamentos": df["Medicamentos"].sum()
+        "Medicamentos": df["Medicamentos"].sum(),
+        "Actividad": df["Actividad"].sum()
     }
 
     for key, value in necesidades_globales.items():
@@ -110,8 +94,7 @@ def generar_pdf():
 def cargar_datos():
     id_val = id_entry.get()
     try:
-        df = pd.read_csv(data_path, sep=';')
-        user_data = df[df['ID'] == int(id_val)]
+        user_data = data_gestor.get_data_by_identifier(int(id_val))
         if user_data.empty:
             messagebox.showerror("Error", "ID no encontrado")
             return
@@ -123,6 +106,7 @@ def cargar_datos():
         comida_var.set(bool(user_data['Comida']))
         ropa_var.set(bool(user_data['Ropa']))
         medicamentos_var.set(bool(user_data['Medicamentos']))
+        actividad_var.set(bool(user_data['Actividad']))
         home_status_var.set(user_data['Estado de la vivienda'])
         comentarios_text.delete("1.0", tk.END)
         comentarios_text.insert(tk.END, user_data['Comentarios'])
@@ -142,7 +126,7 @@ def mostrar_mapa():
     for index, row in df.iterrows():
         folium.Marker(
             location=[row['Latitud'], row['Longitud']],
-            popup=f"ID: {row['ID']}<br>Dirección: {row['Dirección']}<br>Agua: {'Sí' if row['Agua'] else 'No'}<br>Comida: {'Sí' if row['Comida'] else 'No'}<br>Ropa: {'Sí' if row['Ropa'] else 'No'}<br>Medicamentos: {'Sí' if row['Medicamentos'] else 'No'}<br>Estado de la vivienda: {row['Estado de la vivienda']}<br>Comentarios: {row['Comentarios']}",
+            popup=f"<b>ID:</b> {row['ID']} <br> <b>Dirección:</b> {row['Dirección']}<br><b>Agua:</b> {'Sí' if row['Agua'] else 'No'}<br><b>Comida:</b> {'Sí' if row['Comida'] else 'No'}<br><b>Ropa:</b> {'Sí' if row['Ropa'] else 'No'}<br><b>Medicamentos:</b> {'Sí' if row['Medicamentos'] else 'No'}<br><b>Estado de la vivienda:</b> {row['Estado de la vivienda']}<br><b>Comentarios:</b> {row['Comentarios']}",
         ).add_to(mapa)
 
     mapa_path = 'mapa.html'
@@ -152,7 +136,7 @@ def mostrar_mapa():
     webbrowser.open(mapa_path)
     messagebox.showinfo("Éxito", "Mapa generado y mostrado correctamente")
 
-def crear_nuevo_usuario():
+def crear_nueva_incidencia():
     try:
         df = pd.read_csv(data_path, sep=';')
         if df['ID'].empty:
@@ -169,6 +153,7 @@ def crear_nuevo_usuario():
     comida_var.set(False)
     ropa_var.set(False)
     medicamentos_var.set(False)
+    actividad_var.set(False)
     home_status_var.set("Sin desperfectos")
     comentarios_text.delete("1.0", tk.END)
     messagebox.showinfo("Éxito", "Nuevo usuario creado con ID: {}".format(new_id))
@@ -180,8 +165,8 @@ root.title("Formulario de Necesidades")
 tk.Label(root, text="ID").grid(row=0, column=0)
 id_entry = tk.Entry(root)
 id_entry.grid(row=0, column=1)
-tk.Button(root, text="Nuevo Usuario", command=crear_nuevo_usuario).grid(row=0, column=2)
-tk.Button(root, text="Cargar Usuario", command=cargar_datos).grid(row=0, column=3)
+tk.Button(root, text="Nueva Incidencia", command=crear_nueva_incidencia).grid(row=0, column=2)
+tk.Button(root, text="Cargar Incidencia", command=cargar_datos).grid(row=0, column=3)
 
 tk.Label(root, text="Dirección").grid(row=1, column=0)
 direccion_entry = tk.Entry(root)
@@ -199,6 +184,10 @@ tk.Checkbutton(root, text="Ropa", variable=ropa_var).grid(row=2, column=2)
 
 medicamentos_var = tk.BooleanVar()
 tk.Checkbutton(root, text="Medicamentos", variable=medicamentos_var).grid(row=2, column=3)
+
+actividad_var = tk.BooleanVar()
+tk.Checkbutton(root, text="Actividad", variable=actividad_var).grid(row=2, column=4)
+
 
 tk.Label(root, text="Estado de la vivienda").grid(row=3, column=0)
 home_status_var = tk.StringVar()
